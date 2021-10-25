@@ -45,6 +45,7 @@ class Cipher(object):
         in_alphabet: Alphabet = latin_alphabet,
         secret_alphabet: Alphabet = None, 
     ) -> None:
+        super().__init__()
         self.in_alphabet = in_alphabet
         self.secret_alphabet = secret_alphabet if secret_alphabet is not None else in_alphabet
         self.encoder = encoder
@@ -62,11 +63,18 @@ class Cipher(object):
     
 
 
-class CaesarUpgraded(object):
+class CaesarUpgraded(Cipher):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
 
 def main():
-    print(ord("a"))
+    caesar_cipher = CaesarUpgraded()
+    ciphertext = caesar_cipher.encode(plaintext)
+    print('Encrypted:')
+    print(ciphertext)
+    print('Decrypted:')
+    print(caesar_cipher.decode(ciphertext))
 
 
 if __name__ == "__main__":
