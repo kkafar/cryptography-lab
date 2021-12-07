@@ -19,5 +19,6 @@
 			"type_traits": "cpp",
 			"bitset": "cpp"
 		},
-		"C_Cpp.errorSquiggles": "Disabled"
+		"C_Cpp.errorSquiggles": "Disabled",
+		"python.pythonPath": "/Users/kacperkafara/studies/cs/5_term/krypto/lab/.venv/bin/python"
 }
