@@ -1,0 +1,24 @@
+{
+    "files.associations": {
+			"*.rmd": "markdown",
+			"*.tpp": "cpp",
+			"algorithm": "cpp",
+			"atomic": "cpp",
+			"deque": "cpp",
+			"exception": "cpp",
+			"functional": "cpp",
+			"istream": "cpp",
+			"locale": "cpp",
+			"ostream": "cpp",
+			"random": "cpp",
+			"thread": "cpp",
+			"tuple": "cpp",
+			"unordered_map": "cpp",
+			"cmath": "cpp",
+			"*.tcc": "cpp",
+			"type_traits": "cpp",
+			"bitset": "cpp"
+		},
+		"C_Cpp.errorSquiggles": "Disabled",
+		"python.pythonPath": "/Users/kacperkafara/studies/cs/5_term/krypto/lab/.venv/bin/python"
+}
