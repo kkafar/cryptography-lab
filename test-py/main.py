@@ -146,6 +146,24 @@ def _xor_(b1: Bitset, b2: Bitset) -> Bitset:
   return ''.join(result)
 
 
+def _and_mask_(bits: Bitset, mask: Bitset) -> Bitset:
+  assert len(bits) == len(mask), "Not equal lengths of bitsets in and mask op."
+
+  result = [ ]
+  for b, m in zip(bits, mask):
+    result.append('1' if (b == m and b == '1') else '0')
+  return ''.join(result)
+
+
+def _or_mask_(bits: Bitset, mask: Bitset) -> Bitset:
+  assert len(bits) == len(mask), "Not equal lengths of bitsets in or mask op."
+
+  result = [ ]
+  for b, m in zip(bits, mask):
+    result.append('1' if (b == '1' or m == '1') else '0')
+  return ''.join(result)
+
+
 def apply_permutation(bits: Bitset, perm_table) -> Bitset:
   permuted_bits = [None] * len(bits)
   for i, bit in enumerate(bits):
@@ -157,25 +175,58 @@ def split_in_half(bits: Bitset) -> tuple[Bitset, Bitset]:
   return bits[ : len(bits) // 2], bits[len(bits) // 2 : ]
 
 
-def generate_key_schedule(key: Bitset, reversed = False):
-  pass
+def generate_key_schedule(key: Bitset, _reversed = False):
+  key_schedule = [key for _ in range(round_n)]
+  return key_schedule
 
 
-def round_function(bits: Bitset, key: Bitset) -> Bitset:
-  pass
+def round_function(block_l: Bitset, block_r: Bitset, key: Bitset) -> Bitset:
+  new_block_l = block_r
+  new_block_r = _xor_(block_l, nonlinear_f(block_r, key))
+  return new_block_l, new_block_r
 
 
-def block_gen(message: Bitset) -> Bitset:
-  blocks_total_n = len(message) // block_s
+def block_gen(message: Bitset, block_size) -> Bitset:
+  assert len(message) % block_size == 0, f"Message of len: {len(message)} can not be split into blocks of len: {block_size}."
+  blocks_total_n = len(message) // block_size
   block_i = 0
   while block_i < blocks_total_n:
-    yield message[block_i * block_s : (block_i + 1) * block_s]
+    yield message[block_i * block_size : (block_i + 1) * block_size]
+    block_i += 1
 
 
 def expand_bits(bits: Bitset, expansion_map: tuple[int]) -> Bitset:
   output = [None] * len(expansion_map)
   for i, mapped_i in enumerate(expansion_map):
     output[i] = bits[mapped_i]
+  # print('Expanded bit len', len(output))
+  return ''.join(output)
+
+
+def get_row(block: Bitset) -> int:
+  row = _and_mask_(block, '1010').replace('0', '')
+  if len(row) == 0: return 0
+  else:
+    return int(row, 2)
+
+
+def get_col(block: Bitset) -> int:
+  col = _and_mask_(block, '0101').replace('0', '')
+  if len(col) == 0: return 0
+  else:
+    return int(col, 2)
+
+
+def apply_sbox(bits: Bitset) -> Bitset:
+  output = [ ]
+  for i, blk in enumerate(block_gen(bits, 8)):
+    left, right = split_in_half(blk)
+    # print(i, 2*i, 2*i+1, 'lrow', get_row(left), 'lcol', get_col(left), 'rrow', get_row(right), 'rcol', get_col(right))
+    output.append(
+      to_bitset(sbox[2 * i][get_row(left)][get_col(left)], 2) 
+      +
+      to_bitset(sbox[2 * i + 1][get_row(right)][get_col(right)], 2)
+    )
   return ''.join(output)
 
 
@@ -183,8 +234,10 @@ def nonlinear_f(bits: Bitset, key: Bitset) -> Bitset:
   assert len(bits) == block_s // 2, f"Invalid length of bit block: {len(bits)}. Expected: {block_s // 2}."
 
   output = [None] * len(bits)
-
   bits = expand_bits(bits, block_extension_map)
+  bits = _xor_(bits, key)
+
+  return apply_sbox(bits)
 
 
 def to_bitset(numb: int, width = 8) -> Bitset:
@@ -195,6 +248,7 @@ def to_bitset(numb: int, width = 8) -> Bitset:
     return '0' * (width - len(as_str)) + as_str
   else:
     return as_str
+
 
 def int_from_bitset(bits: Bitset) -> int:
   return int(bits, 2)
@@ -209,63 +263,76 @@ def convert_message_to_bits(message: str, width_per_char: int = 8) -> Bitset:
 
 
 def convert_message_from_bits(message: Bitset, width_per_char: int = 8) -> str:
+  print('convert')
   assert len(message) % width_per_char == 0, f"Message of len: {len(message)} can not be split into blocks of len: {width_per_char}."
-  block_n = len(message) // width_per_char
 
   converted_message = []
-  for i in range(block_n):
-    converted_message.append(chr(int_from_bitset(message[i * width_per_char : (i + 1) * width_per_char])))
+  print(message)
+  # i = 0
+  for block in block_gen(message, width_per_char):
+    # print('iteration', i)
+    # print(block)
+    # print(int_from_bitset(block))
+    # print(chr(int_from_bitset(block)))
+    # print(chr(int_from_bitset(block)))
+    converted_message.append(chr(int_from_bitset(block)))
+    # i += 1
     
   return ''.join(converted_message)
 
 
 def codec(message: Bitset, key: Bitset, decode: bool, width_per_char: int = 8) -> Bitset:
-  message = convert_message_to_bits(message)
-  key_schedule = generate_key_schedule(key, reversed=decode)
+  if not decode:
+    print('Encoding')
+  else:
+    print('Decoding')
+  print(message)
+
+  key_schedule = generate_key_schedule(key, _reversed=decode)
   assert len(key_schedule) == round_n,\
     f"Invalid number of keys in schedule. Expected {round_n}. Received: {len(key_schedule)}."
 
   encoded_message = [ ]
-  encoded_block = [ ] 
 
-  for message_block in block_gen(message):
+  for message_block in block_gen(message, block_s):
+    # print('Message block')
+    # print(message_block)
     block_l, block_r = split_in_half(message_block)
     for i, round_key in enumerate(key_schedule):
-      new_block_l = block_r
-      new_block_r = _xor_(block_l, nonlinear_f(block_r, round_key))
-      block_l, block_r = new_block_l, new_block_r
+      block_l, block_r = round_function(block_l, block_r, round_key)
     
     encoded_message.append(block_l + block_r)
-  
+  print('Return from codec')
+  print(''.join(encoded_message))
   return ''.join(encoded_message)
   
 
-
 def encode(message: str, key: Bitset, width_per_char: int = 8) -> Bitset:
-  return codec(message, key, False, width_per_char=width_per_char)
+  return codec(convert_message_to_bits(message), key, False, width_per_char=8)
 
 
 def decode(message: Bitset, key: Bitset, width_per_char: int = 8) -> str:
-  return convert_message_from_bits(codec(message, key, True, width_per_char=width_per_char))
+  return convert_message_from_bits(codec(message, key, True, width_per_char=8))
 
 
 
 
 def test():
-  message = "Ala ma k" * 8 # 64 znaki
-  print("Wyjściowa wiadomość")
+  message = "01234567899876543210024681357901"
+  print("Wyjściowa wiadomość", len(message))
   print(message)
 
-  key = "1110101101001010" * 8
+  key = "1110101101001010" * 4
 
   encoded_message = encode(message, key)
 
-  print("Zakodowana wiadomość")
+  print("Zakodowana wiadomość", len(message))
   print(encoded_message)
 
+  key = "1110101101001010" * 4
   decoded_message = decode(encoded_message, key)
 
-  print("Zdekodowana wiadomość")
+  print("Zdekodowana wiadomość", len(message))
   print(decoded_message)
 
 test()
