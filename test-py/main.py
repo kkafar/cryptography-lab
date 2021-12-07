@@ -1,9 +1,13 @@
 # Szyfr: 
 # będzie operował na słowie 64 bitowym
 # będzie wykorzystywał klucz 64 bitowy
+# 
+# Rezygnujemy z początkowej i końcowej permutacji (nie wnoszą wiele do bezpieczeństwa)
+# 
 
 # NOTE
 # Możliwe, że do uruchomienia kodu wymagany jest python 10 (type unions)
+from pprint import pprint
 
 Bitset = str
 
@@ -21,6 +25,29 @@ block_extension_map = (
    8, 10, 11, 12, 13, 14, 15, 17,
   18, 19, 20, 21, 22, 24, 25, 26
 )
+
+key_permutation = (
+	45, 31, 32,  1, 63, 19, 62, 53,
+	 2,  9, 11, 21, 37, 51, 54, 18,
+	34, 47, 16,  8,  0, 52, 43, 41,
+	 6, 49, 33, 22, 27, 44, 24, 57,
+	 3, 20, 28, 60, 61, 39, 50, 25,
+	17, 10,  4,  5, 58, 14, 29, 38,
+	12, 35, 59, 13, 46, 23, 42, 26,
+	36, 56, 30,  7, 48, 55, 15, 40
+)
+
+key_permutation_2 = (
+	31, 45, 23,  4, 63, 19, 50, 40,
+	 2,  9, 11, 21, 37, 51, 54, 18,
+	36, 14, 35,  8,  0, 28, 43, 41,
+	 6, 10, 33, 42, 27, 44, 24, 57,
+	 3, 20, 52, 60, 61, 39, 62, 25,
+	17, 49,  1,  5, 58, 47, 29, 38,
+	12, 16, 59, 13, 46, 32, 22, 26,
+	34, 56, 30,  7, 48, 55, 15, 53
+)
+
 
 sbox = (
 	# sbox 0
@@ -175,8 +202,24 @@ def split_in_half(bits: Bitset) -> tuple[Bitset, Bitset]:
   return bits[ : len(bits) // 2], bits[len(bits) // 2 : ]
 
 
+def shift_left_circle(bits: Bitset, shift: int) -> Bitset:
+  return bits[shift :] + bits[ : shift]
+
+
 def generate_key_schedule(key: Bitset, _reversed = False):
-  key_schedule = [key for _ in range(round_n)]
+  key = apply_permutation(key, key_permutation)
+  key_schedule = [ ]
+  for i in range(round_n):
+    key_left, key_right = split_in_half(key)
+    if i % 5 == 2:
+      key_left, key_right = shift_left_circle(key_left, 6), shift_left_circle(key_right, 6)
+    elif i % 3 == 1 or i == 8 or i == 0:
+      key_left, key_right = shift_left_circle(key_left, 2), shift_left_circle(key_right, 2)
+    key = apply_permutation(key_right + key_left, key_permutation_2)
+    key_schedule.append(key)
+
+  if _reversed:
+    return list(reversed(key_schedule))
   return key_schedule
 
 
@@ -263,11 +306,10 @@ def convert_message_to_bits(message: str, width_per_char: int = 8) -> Bitset:
 
 
 def convert_message_from_bits(message: Bitset, width_per_char: int = 8) -> str:
-  print('convert')
+  # print('convert')
   assert len(message) % width_per_char == 0, f"Message of len: {len(message)} can not be split into blocks of len: {width_per_char}."
-
   converted_message = []
-  print(message)
+  # print(message)
   # i = 0
   for block in block_gen(message, width_per_char):
     # print('iteration', i)
@@ -283,12 +325,13 @@ def convert_message_from_bits(message: Bitset, width_per_char: int = 8) -> str:
 
 def codec(message: Bitset, key: Bitset, decode: bool, width_per_char: int = 8) -> Bitset:
   if not decode:
-    print('Encoding')
+    print('Encoding', len(message))
   else:
-    print('Decoding')
+    print('Decoding', len(message))
   print(message)
 
   key_schedule = generate_key_schedule(key, _reversed=decode)
+  # pprint(key_schedule)
   assert len(key_schedule) == round_n,\
     f"Invalid number of keys in schedule. Expected {round_n}. Received: {len(key_schedule)}."
 
@@ -298,12 +341,12 @@ def codec(message: Bitset, key: Bitset, decode: bool, width_per_char: int = 8) -
     # print('Message block')
     # print(message_block)
     block_l, block_r = split_in_half(message_block)
-    for i, round_key in enumerate(key_schedule):
+    for round_key in key_schedule:
       block_l, block_r = round_function(block_l, block_r, round_key)
     
     encoded_message.append(block_l + block_r)
-  print('Return from codec')
-  print(''.join(encoded_message))
+  # print('Return from codec')
+  # print(''.join(encoded_message))
   return ''.join(encoded_message)
   
 
@@ -315,10 +358,9 @@ def decode(message: Bitset, key: Bitset, width_per_char: int = 8) -> str:
   return convert_message_from_bits(codec(message, key, True, width_per_char=8))
 
 
-
-
 def test():
-  message = "01234567899876543210024681357901"
+  # message = "01234567899876543210024681357901"
+  message = '01234567'
   print("Wyjściowa wiadomość", len(message))
   print(message)
 
@@ -334,5 +376,6 @@ def test():
 
   print("Zdekodowana wiadomość", len(message))
   print(decoded_message)
+
 
 test()
