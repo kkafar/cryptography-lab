@@ -20,5 +20,5 @@
 			"bitset": "cpp"
 		},
 		"C_Cpp.errorSquiggles": "Disabled",
-		"python.pythonPath": "/Users/kacperkafara/studies/cs/5_term/krypto/lab/.venv/bin/python"
+		"python.pythonPath": ".venv/bin/python"
 }
