@@ -327,11 +327,11 @@ def codec(message: Bitset, key: Bitset, decode: bool, width_per_char: int = 8) -
 
 
 def encode(message: str, key: Bitset, width_per_char: int = 8) -> Bitset:
-    return codec(convert_message_to_bits(message), key, False, width_per_char=8)
+    return codec(convert_message_to_bits(message), key, False, width_per_char=width_per_char)
 
 
 def decode(message: Bitset, key: Bitset, width_per_char: int = 8) -> str:
-    return convert_message_from_bits(codec(message, key, True, width_per_char=8))
+    return convert_message_from_bits(codec(message, key, True, width_per_char=width_per_char))
 
 
 def test():
