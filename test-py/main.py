@@ -301,8 +301,8 @@ def convert_message_to_bits(message: str, width_per_char: int = 8) -> Bitset:
 
 
 def convert_message_from_bits(message: Bitset, width_per_char: int = 8) -> str:
-    assert len(
-        message) % width_per_char == 0, f"Message of len: {len(message)} can not be split into blocks of len: {width_per_char}."
+    assert len(message) % width_per_char == 0, \
+        f"Message of len: {len(message)} can not be split into blocks of len: {width_per_char}."
     converted_message = []
     for block in block_gen(message, width_per_char):
         converted_message.append(chr(int_from_bitset(block)))
